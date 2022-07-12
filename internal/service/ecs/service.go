@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-provider-aws/internal/conns"
 	"github.com/hashicorp/terraform-provider-aws/internal/create"
 	"github.com/hashicorp/terraform-provider-aws/internal/flex"
+	elbv2 "github.com/hashicorp/terraform-provider-aws/internal/service/elbv2"
 	tftags "github.com/hashicorp/terraform-provider-aws/internal/tags"
 	"github.com/hashicorp/terraform-provider-aws/internal/tfresource"
 	"github.com/hashicorp/terraform-provider-aws/internal/verify"
@@ -557,6 +558,12 @@ func resourceServiceCreate(d *schema.ResourceData, meta interface{}) error {
 	if d.Get("wait_for_steady_state").(bool) {
 		if _, err := waitServiceStable(conn, d.Id(), cluster, d.Timeout(schema.TimeoutCreate)); err != nil {
 			return fmt.Errorf("error waiting for ECS service (%s) to reach steady state after creation: %w", d.Id(), err)
+		}
+		if s := d.Get("load_balancer.target_group_arn").(string); s != "" {
+			elbv2Conn := meta.(*conns.AWSClient).ELBV2Conn
+			if _, err := elbv2.WaitTargetGroupHealthy(elbv2Conn, s, d.Timeout(schema.TimeoutCreate)); err != nil {
+				return fmt.Errorf("error waiting for attached Target Group (%s) to reach healthy state after ECS service creation: %w", s, err)
+			}
 		}
 	} else {
 		if _, err := waitServiceActive(conn, d.Id(), cluster, d.Timeout(schema.TimeoutCreate)); err != nil {
