@@ -32,3 +32,25 @@ func statusLoadBalancerState(conn *elbv2.ELBV2, arn string) resource.StateRefres
 		return output, aws.StringValue(lb.State.Code), nil
 	}
 }
+
+func statusTargetGroupState(conn *elbv2.ELBV2, arn string) resource.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+		input := &elbv2.DescribeTargetHealthInput{
+			TargetGroupArn: aws.String(arn),
+		}
+
+		output, err := conn.DescribeTargetHealth(input)
+
+		if err != nil {
+			return nil, "", err
+		}
+
+		if len(output.TargetHealthDescriptions) != 1 {
+			return nil, "", fmt.Errorf("No Target Group found for %s", arn)
+		}
+		tg := output.TargetHealthDescriptions[0]
+
+		return output, aws.StringValue(tg.TargetHealth.State), nil
+
+	}
+}

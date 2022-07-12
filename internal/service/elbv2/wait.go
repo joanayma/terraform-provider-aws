@@ -50,3 +50,20 @@ func waitLoadBalancerActive(conn *elbv2.ELBV2, arn string, timeout time.Duration
 	}
 	return nil, err
 }
+
+func waitTargetGroupHealthy(conn *elbv2.ELBV2, arn string, timeout time.Duration) (*elbv2.TargetGroup, error) {
+
+	stateConf := &resource.StateChangeConf{
+		Pending: []string{elbv2.TargetHealthStateEnumInitial, elbv2.TargetHealthStateEnumUnhealthy, elbv2.TargetHealthStateEnumUnused, elbv2.TargetHealthStateEnumDraining, elbv2.TargetHealthStateEnumUnavailable},
+		Target: []string{elbv2.TargetHealthStateEnumHealthy},
+		Refresh: statusTargetGroupState(conn, arn),
+		Timeout: timeout,
+		MinTimeout: 10 * time.Second,
+	}
+	output, err := stateConf.WaitForState()
+
+	if v, ok := output.(*elbv2.TargetGroup); ok {
+		return v, err
+	}
+	return nil, err
+}
