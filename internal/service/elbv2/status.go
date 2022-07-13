@@ -45,12 +45,13 @@ func statusTargetGroupState(conn *elbv2.ELBV2, arn string) resource.StateRefresh
 			return nil, "", err
 		}
 
-		if len(output.TargetHealthDescriptions) != 1 {
-			return nil, "", fmt.Errorf("No Target Group found for %s", arn)
+		if len(output.TargetHealthDescriptions) > 0 {
+			for i, v := range output.TargetHealthDescriptions {
+				return nil, "", fmt.Errorf("Target Group %s is %v: %v. Reason: %v.", arn, v.TargetHealth.State, v.TargetHealth.Description, v.TargetHealth.Reason)
+			}
 		}
-		tg := output.TargetHealthDescriptions[0]
 
-		return output, aws.StringValue(tg.TargetHealth.State), nil
+		return output, elbv2.TargetHealthStateEnumHealthy, nil
 
 	}
 }

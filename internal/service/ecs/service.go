@@ -565,7 +565,6 @@ func resourceServiceCreate(d *schema.ResourceData, meta interface{}) error {
 				if tg := aws.StringValue(lb.TargetGroupArn); tg != "" {
 					elbv2Conn := meta.(*conns.AWSClient).ELBV2Conn
 					if _, err := elbv2.WaitTargetGroupHealthy(elbv2Conn, tg, d.Timeout(schema.TimeoutCreate)); err != nil {
-						log.Printf("Waiting for TG: %s", tg)
 						return fmt.Errorf("error waiting for attached Target Group (%s) to reach healthy state after ECS service creation: %w", tg, err)
 					}
 				}
