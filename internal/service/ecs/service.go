@@ -559,10 +559,16 @@ func resourceServiceCreate(d *schema.ResourceData, meta interface{}) error {
 		if _, err := waitServiceStable(conn, d.Id(), cluster, d.Timeout(schema.TimeoutCreate)); err != nil {
 			return fmt.Errorf("error waiting for ECS service (%s) to reach steady state after creation: %w", d.Id(), err)
 		}
-		if s := d.Get("load_balancer.target_group_arn").(string); s != "" {
-			elbv2Conn := meta.(*conns.AWSClient).ELBV2Conn
-			if _, err := elbv2.WaitTargetGroupHealthy(elbv2Conn, s, d.Timeout(schema.TimeoutCreate)); err != nil {
-				return fmt.Errorf("error waiting for attached Target Group (%s) to reach healthy state after ECS service creation: %w", s, err)
+		loadBalancers := expandLoadBalancers(d.Get("load_balancer").(*schema.Set).List())
+		if len(loadBalancers) > 0 {
+			for _, lb := range loadBalancers {
+				if tg := aws.StringValue(lb.TargetGroupArn); tg != "" {
+					elbv2Conn := meta.(*conns.AWSClient).ELBV2Conn
+					if _, err := elbv2.WaitTargetGroupHealthy(elbv2Conn, tg, d.Timeout(schema.TimeoutCreate)); err != nil {
+						log.Printf("Waiting for TG: %s", tg)
+						return fmt.Errorf("error waiting for attached Target Group (%s) to reach healthy state after ECS service creation: %w", tg, err)
+					}
+				}
 			}
 		}
 	} else {
