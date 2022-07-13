@@ -46,8 +46,8 @@ func statusTargetGroupState(conn *elbv2.ELBV2, arn string) resource.StateRefresh
 		}
 
 		if len(output.TargetHealthDescriptions) > 0 {
-			for i, v := range output.TargetHealthDescriptions {
-				return nil, "", fmt.Errorf("Target Group %s is %v: %v. Reason: %v.", arn, v.TargetHealth.State, v.TargetHealth.Description, v.TargetHealth.Reason)
+			for _, v := range output.TargetHealthDescriptions {
+				return nil, "", fmt.Errorf("Target Group %s is %s: %s. Reason: %s.", arn, *v.TargetHealth.State, *v.TargetHealth.Description, *v.TargetHealth.Reason)
 			}
 		}
 
